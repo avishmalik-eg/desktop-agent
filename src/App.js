@@ -13,7 +13,7 @@ function App() {
       "Content-Type": "application/json"
     };
     try {
-      const res = await axios.post("http://localhost:5001/proxy", {
+      const res = await axios.post("https://localhost:5001/proxy", {
         method,
         url,
         headers: parsedHeaders,
