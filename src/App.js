@@ -26,6 +26,28 @@ function App() {
     }
   };
 
+  useEffect(() => {
+    const socket = new WebSocket("wss://localhost:5001/ws");
+
+    socket.onopen = () => {
+      console.log("WebSocket connected");
+    };
+
+    socket.onmessage = (event) => {
+      const data = event.data;
+      console.log("Received update from agent:", data);
+      // update state or UI here
+    };
+
+    socket.onclose = () => {
+      console.log("WebSocket closed");
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, []);
+
   return (
     <div style={{ padding: "1rem" }}>
       <h2>Agent API Sender (Postman-like)</h2>
