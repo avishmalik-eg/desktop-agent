@@ -1,27 +1,37 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 
 function App() {
   const [method, setMethod] = useState("GET");
   const [url, setUrl] = useState("");
   const [body, setBody] = useState("");
-  const [headers, setHeaders] = useState("{}");
+  const [headers, setHeaders] = useState('{ "Content-Type": "application/json" }');
   const [response, setResponse] = useState(null);
+  const [agentUpdates, setAgentUpdates] = useState([]);
 
   const sendRequest = async () => {
-    let parsedHeaders = {
-      "Content-Type": "application/json"
-    };
+    let parsedHeaders = {};
+    let parsedBody = body;
+
+    try {
+      parsedHeaders = JSON.parse(headers || "{}");
+      if (parsedHeaders["Content-Type"] === "application/json" && body.trim()) {
+        parsedBody = JSON.parse(body);
+      }
+    } catch (err) {
+      setResponse({ error: "Invalid JSON in headers or body." });
+      return;
+    }
+
     try {
       const res = await axios.post("https://localhost:5001/proxy", {
         method,
         url,
         headers: parsedHeaders,
-        body,
+        body: parsedBody,
       });
       setResponse(res.data);
     } catch (error) {
-      console.log()
       setResponse({ error: error.message });
     }
   };
@@ -34,34 +44,64 @@ function App() {
     };
 
     socket.onmessage = (event) => {
-      const data = event.data;
-      console.log("Received update from agent:", data);
-      // update state or UI here
+      const msg = event.data;
+      console.log("Agent update:", msg);
+      setAgentUpdates((prev) => [...prev, msg]);
     };
 
     socket.onclose = () => {
       console.log("WebSocket closed");
     };
 
-    return () => {
-      socket.close();
-    };
+    return () => socket.close();
   }, []);
 
   return (
-    <div style={{ padding: "1rem" }}>
-      <h2>Agent API Sender (Postman-like)</h2>
-      <select value={method} onChange={(e) => setMethod(e.target.value)}>
-        <option>GET</option>
-        <option>POST</option>
-        <option>PUT</option>
-        <option>DELETE</option>
-      </select>
-      <input type="text" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Enter API URL" />
-      <textarea value={headers} onChange={(e) => setHeaders(e.target.value)} placeholder='{"Content-Type":"application/json"}' />
-      <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Request Body (optional)" />
-      <button onClick={sendRequest}>Send</button>
+    <div style={{ padding: "1rem", fontFamily: "monospace" }}>
+      <h2>🛰️ Agent API Tester</h2>
+      <div>
+        <select value={method} onChange={(e) => setMethod(e.target.value)}>
+          <option>GET</option>
+          <option>POST</option>
+          <option>PUT</option>
+          <option>DELETE</option>
+        </select>
+        <input
+          type="text"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="Enter full API URL"
+          style={{ width: "70%", marginLeft: "10px" }}
+        />
+      </div>
+
+      <textarea
+        rows={4}
+        value={headers}
+        onChange={(e) => setHeaders(e.target.value)}
+        placeholder='Headers: {"Content-Type":"application/json"}'
+        style={{ width: "100%", marginTop: "10px" }}
+      />
+      <textarea
+        rows={6}
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        placeholder="Body (JSON only)"
+        style={{ width: "100%", marginTop: "10px" }}
+      />
+      <button onClick={sendRequest} style={{ marginTop: "10px" }}>
+        🚀 Send
+      </button>
+
+      <h3>📬 Response</h3>
       <pre>{JSON.stringify(response, null, 2)}</pre>
+
+      <h3>🧠 Agent Updates</h3>
+      <ul>
+        {agentUpdates.map((msg, idx) => (
+          <li key={idx}>{msg}</li>
+        ))}
+      </ul>
     </div>
   );
 }
